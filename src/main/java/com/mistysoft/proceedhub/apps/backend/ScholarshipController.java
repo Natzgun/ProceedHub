@@ -8,6 +8,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/scholarships")
 public class ScholarshipController {
@@ -39,9 +41,9 @@ public class ScholarshipController {
     }
 
     @GetMapping("/get_all")
-    public ResponseEntity<String> getAllScholarships() {
-        getAllScholarships.execute();
-        return new ResponseEntity<>("Scholarships retrieved successfully", HttpStatus.OK);
+    public ResponseEntity<List<Scholarship>> getAllScholarships() {
+        List<Scholarship> allScholarship = getAllScholarships.execute();
+        return new ResponseEntity<>(allScholarship, HttpStatus.OK);
     }
 
     @PostMapping("/update/{id}")
