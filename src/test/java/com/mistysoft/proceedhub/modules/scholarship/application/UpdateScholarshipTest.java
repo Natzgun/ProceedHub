@@ -1,6 +1,5 @@
 package com.mistysoft.proceedhub.modules.scholarship.application;
 
-import com.mistysoft.proceedhub.modules.scholarship.application.dto.ScholarshipDTO;
 import com.mistysoft.proceedhub.modules.scholarship.domain.*;
 import org.junit.jupiter.api.Test;
 import java.util.Optional;
@@ -11,15 +10,15 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class UpdateScholarshipTest {
-    private final IScholarshipRepository repository = mock(IScholarshipRepository.class);
+    private final ScholarshipRepository repository = mock(ScholarshipRepository.class);
     private final UpdateScholarship update = new UpdateScholarship(repository);
 
     @Test
     void updatesRequestedFieldsAndKeepsTheOtherFields() {
         Scholarship original = sample("id");
         when(repository.findById("id")).thenReturn(Optional.of(original));
-        Scholarship updated = update.execute(ScholarshipDTO.builder().title("New title")
-                .requirements(Set.of()).build(), "id");
+        Scholarship updated = update.execute(new ScholarshipChanges("New title", null, null, null,
+                null, null, null, Set.of()), "id");
 
         assertEquals("New title", updated.getTitle());
         assertEquals(original.getDate(), updated.getDate());
@@ -33,7 +32,8 @@ class UpdateScholarshipTest {
     void rejectsBlankUpdatesWithoutSaving() {
         when(repository.findById("id")).thenReturn(Optional.of(sample("id")));
         assertThrows(IllegalArgumentException.class,
-                () -> update.execute(ScholarshipDTO.builder().title(" ").build(), "id"));
+                () -> update.execute(new ScholarshipChanges(" ", null, null, null,
+                        null, null, null, null), "id"));
         verify(repository, never()).save(any());
     }
 
@@ -41,7 +41,8 @@ class UpdateScholarshipTest {
     void reportsMissingScholarshipsWithoutSaving() {
         when(repository.findById("missing")).thenReturn(Optional.empty());
         assertThrows(ScholarshipNotFoundException.class,
-                () -> update.execute(ScholarshipDTO.builder().build(), "missing"));
+                () -> update.execute(new ScholarshipChanges(null, null, null, null,
+                        null, null, null, null), "missing"));
         verify(repository, never()).save(any());
     }
 }

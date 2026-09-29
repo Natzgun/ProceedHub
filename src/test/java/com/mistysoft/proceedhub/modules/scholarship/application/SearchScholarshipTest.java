@@ -1,6 +1,6 @@
 package com.mistysoft.proceedhub.modules.scholarship.application;
 
-import com.mistysoft.proceedhub.modules.scholarship.domain.IScholarshipRepository;
+import com.mistysoft.proceedhub.modules.scholarship.domain.ScholarshipRepository;
 import org.junit.jupiter.api.Test;
 import java.util.Optional;
 import static com.mistysoft.proceedhub.modules.scholarship.ScholarshipFixtures.sample;
@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class SearchScholarshipTest {
-    private final IScholarshipRepository repository = mock(IScholarshipRepository.class);
+    private final ScholarshipRepository repository = mock(ScholarshipRepository.class);
     private final SearchScholarship search = new SearchScholarship(repository);
 
     @Test

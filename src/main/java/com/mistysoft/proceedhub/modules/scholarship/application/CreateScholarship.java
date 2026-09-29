@@ -1,6 +1,5 @@
 package com.mistysoft.proceedhub.modules.scholarship.application;
 
-import com.mistysoft.proceedhub.modules.scholarship.application.dto.ScholarshipDTO;
 import com.mistysoft.proceedhub.modules.scholarship.domain.*;
 
 import org.springframework.stereotype.Service;
@@ -12,20 +11,20 @@ import java.util.UUID;
 @Service
 public class CreateScholarship {
 
-    private final IScholarshipRepository scholarshipRepository;
+    private final ScholarshipRepository scholarshipRepository;
     private final Clock clock;
 
-    public CreateScholarship(IScholarshipRepository scholarshipRepository, Clock clock) {
+    public CreateScholarship(ScholarshipRepository scholarshipRepository, Clock clock) {
         this.scholarshipRepository = scholarshipRepository;
         this.clock = clock;
     }
 
-    public Scholarship execute(ScholarshipDTO request) {
+    public Scholarship execute(ScholarshipChanges request) {
         String id = UUID.randomUUID().toString();
         Scholarship scholarship = Scholarship.create(id, new ScholarshipChanges(
-                request.getTitle(), request.getDescription(), ZonedDateTime.now(clock),
-                request.getImage(), request.getCountry(), request.getContinent(),
-                request.getMoreInfo(), request.getRequirements()));
+                request.title(), request.description(), ZonedDateTime.now(clock),
+                request.image(), request.country(), request.continent(),
+                request.moreInfo(), request.requirements()));
         scholarshipRepository.save(scholarship);
         return scholarship;
     }

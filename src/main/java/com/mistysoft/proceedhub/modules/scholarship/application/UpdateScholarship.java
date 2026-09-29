@@ -1,23 +1,22 @@
 package com.mistysoft.proceedhub.modules.scholarship.application;
 
-import com.mistysoft.proceedhub.modules.scholarship.application.dto.ScholarshipDTO;
 import com.mistysoft.proceedhub.modules.scholarship.domain.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class UpdateScholarship {
-    private final IScholarshipRepository repository;
+    private final ScholarshipRepository repository;
 
-    public UpdateScholarship(IScholarshipRepository repository) {
+    public UpdateScholarship(ScholarshipRepository repository) {
         this.repository = repository;
     }
 
-    public Scholarship execute(ScholarshipDTO request, String id) {
+    @Transactional
+    public Scholarship execute(ScholarshipChanges request, String id) {
         Scholarship existing = repository.findById(id)
                 .orElseThrow(() -> new ScholarshipNotFoundException(id));
-        Scholarship updated = existing.update(new ScholarshipChanges(
-                request.getTitle(), request.getDescription(), request.getDate(), request.getImage(),
-                request.getCountry(), request.getContinent(), request.getMoreInfo(), request.getRequirements()));
+        Scholarship updated = existing.update(request);
         repository.save(updated);
         return updated;
     }

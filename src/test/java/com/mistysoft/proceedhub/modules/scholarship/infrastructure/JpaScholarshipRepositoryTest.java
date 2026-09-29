@@ -39,7 +39,9 @@ class JpaScholarshipRepositoryTest {
 
         ArgumentCaptor<ScholarshipEntity> scholarshipEntityCaptor = ArgumentCaptor.forClass(ScholarshipEntity.class);
         verify(repository).save(scholarshipEntityCaptor.capture());
-        assertEquals(scholarshipEntity, scholarshipEntityCaptor.getValue());
+        assertEquals(scholarship.getId(), scholarshipEntityCaptor.getValue().getId());
+        assertEquals("Proof of enrollment", scholarshipEntityCaptor.getValue()
+                .getRequirements().iterator().next().getName());
     }
 
     @Test

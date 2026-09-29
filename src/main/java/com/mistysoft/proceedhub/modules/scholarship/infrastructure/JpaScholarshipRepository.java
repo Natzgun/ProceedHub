@@ -7,7 +7,7 @@ import java.util.Optional;
 import java.util.List;
 
 @Repository 
-public class JpaScholarshipRepository implements IScholarshipRepository {
+public class JpaScholarshipRepository implements ScholarshipRepository {
     
     private final ISpringDataScholarshipRepository repository;
 

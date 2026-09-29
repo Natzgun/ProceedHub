@@ -1,14 +1,11 @@
 package com.mistysoft.proceedhub.modules.scholarship.infrastructure;
 
-import com.mistysoft.proceedhub.modules.scholarship.domain.Requirement;
 import com.mistysoft.proceedhub.modules.scholarship.domain.Scholarship;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.ZonedDateTime;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static com.mistysoft.proceedhub.modules.scholarship.ScholarshipFixtures.sample;
