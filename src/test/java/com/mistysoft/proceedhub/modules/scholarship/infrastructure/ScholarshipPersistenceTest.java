@@ -1,6 +1,7 @@
 package com.mistysoft.proceedhub.modules.scholarship.infrastructure;
 
 import com.mistysoft.proceedhub.modules.scholarship.domain.Scholarship;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -14,12 +15,15 @@ import static com.mistysoft.proceedhub.modules.scholarship.ScholarshipFixtures.s
 @Transactional
 class ScholarshipPersistenceTest {
     @Autowired JpaScholarshipRepository adapter;
+    @Autowired EntityManager entityManager;
 
     @Test
     void requirementsSurviveJpaRoundTripWithoutPersistingDomainObjects() {
         Scholarship scholarship = sample("scholarship-1");
 
         adapter.save(scholarship);
+        entityManager.flush();
+        entityManager.clear();
         Scholarship restored = adapter.findById(scholarship.getId()).orElseThrow();
 
         assertEquals(scholarship.getRequirements(), restored.getRequirements());
