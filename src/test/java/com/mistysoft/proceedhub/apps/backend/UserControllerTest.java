@@ -105,7 +105,9 @@ class UserControllerTest {
                 .content("""
                         {"username":"alice","password":"secret"}
                         """))
-                .andExpect(status().isOk()).andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("HttpOnly")));
+                .andExpect(status().isOk())
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("HttpOnly")))
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("Max-Age=3600")));
         mvc.perform(post("/api/users/login").with(csrfCookie()).secure(true).contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {"username":"alice","password":"secret"}

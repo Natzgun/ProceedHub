@@ -3,7 +3,7 @@ package com.mistysoft.proceedhub.apps.backend;
 import com.mistysoft.proceedhub.apps.backend.dto.LoginUserRequest;
 import com.mistysoft.proceedhub.apps.backend.dto.RegisterUserRequest;
 import com.mistysoft.proceedhub.apps.backend.dto.UserResponse;
-import com.mistysoft.proceedhub.modules.user.infrastructure.security.JwtUtil;
+import com.mistysoft.proceedhub.modules.user.application.TokenIssuer;
 import com.mistysoft.proceedhub.modules.user.application.LoginUser;
 import com.mistysoft.proceedhub.modules.user.application.RegisterUser;
 import com.mistysoft.proceedhub.modules.user.application.SearchUser;
@@ -24,13 +24,14 @@ public class UserController {
     private final RegisterUser registerUser;
     private final LoginUser loginUser;
     private final SearchUser searchUser;
-    private final JwtUtil jwtUtil;
+    private final TokenIssuer tokenIssuer;
 
-    public UserController(RegisterUser registerUser, LoginUser loginUser, SearchUser searchUser, JwtUtil jwtUtil) {
+    public UserController(RegisterUser registerUser, LoginUser loginUser, SearchUser searchUser,
+                          TokenIssuer tokenIssuer) {
         this.registerUser = registerUser;
         this.loginUser = loginUser;
         this.searchUser = searchUser;
-        this.jwtUtil = jwtUtil;
+        this.tokenIssuer = tokenIssuer;
     }
 
     @GetMapping("/csrf")
@@ -59,10 +60,10 @@ public class UserController {
         } catch (IllegalArgumentException exception) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        String token = jwtUtil.generateToken(user.getUsername());
-        ResponseCookie cookie = ResponseCookie.from("token", token)
+        TokenIssuer.IssuedToken token = tokenIssuer.issue(user.getUsername());
+        ResponseCookie cookie = ResponseCookie.from("token", token.value())
                 .httpOnly(true).secure(servletRequest.isSecure()).sameSite("Lax")
-                .path("/").maxAge(jwtUtil.expirationSeconds()).build();
+                .path("/").maxAge(token.maxAgeSeconds()).build();
         return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(UserResponse.from(user));
     }
 

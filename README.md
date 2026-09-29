@@ -37,8 +37,10 @@ El diseño sigue principios de separación de responsabilidades y extensibilidad
 
 ### Módulo de usuarios como referencia
 
-El módulo `user` separa el agregado y sus reglas (`domain`) de los casos de uso y el puerto de hash (`application`).
-La implementación JPA y BCrypt pertenece a `infrastructure`; los contratos JSON pertenecen a `apps/backend/dto`.
+El módulo `user` separa el agregado y sus reglas (`domain`) de los casos de uso y los puertos de hash y emisión
+de tokens (`application`). Las implementaciones JPA, BCrypt y JWT pertenecen a `infrastructure`; el controlador
+depende de `TokenIssuer` y recibe el valor y la duración de la cookie sin conocer JWT.
+Los contratos JSON pertenecen a `apps/backend/dto`.
 El registro asigna únicamente el rol `USER`. Las cuentas `ADMIN` se aprovisionan fuera del registro público.
 
 Para ejecutar las pruebas con Java 25 no se requieren variables de entorno: `./gradlew test` usa H2 y una clave de prueba local.
@@ -113,6 +115,7 @@ main.java.com.mistysoft.proceedhub
         │   │   PasswordHasher.java
         │   │   RegisterUser.java
         │   │   SearchUser.java
+        │   │   TokenIssuer.java
         │
         ├───domain
         │       UserRepository.java
