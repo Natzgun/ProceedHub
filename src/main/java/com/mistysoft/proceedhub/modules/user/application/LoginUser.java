@@ -1,27 +1,29 @@
 package com.mistysoft.proceedhub.modules.user.application;
 
 import com.mistysoft.proceedhub.modules.user.domain.User;
-import com.mistysoft.proceedhub.modules.user.domain.IUserRepository;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import com.mistysoft.proceedhub.modules.user.domain.UserRepository;
 import org.springframework.stereotype.Service;
 
 @Service
 public class LoginUser {
-    private final IUserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final UserRepository userRepository;
+    private final PasswordHasher passwordHasher;
 
-    public LoginUser(IUserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public LoginUser(UserRepository userRepository, PasswordHasher passwordHasher) {
         this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
+        this.passwordHasher = passwordHasher;
     }
 
-    public void execute(String username, String rawPassword) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-
-        if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
-            throw new IllegalArgumentException("Invalid password");
+    public User execute(String username, String rawPassword) {
+        if (username == null || username.isBlank() || rawPassword == null || rawPassword.isBlank()) {
+            throw new IllegalArgumentException("Invalid credentials");
         }
+        User user = userRepository.findByUsername(username.trim())
+                .orElseThrow(() -> new IllegalArgumentException("Invalid credentials"));
 
+        if (!passwordHasher.matches(rawPassword, user.getPasswordHash())) {
+            throw new IllegalArgumentException("Invalid credentials");
+        }
+        return user;
     }
 }

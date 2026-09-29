@@ -1,8 +1,9 @@
 package com.mistysoft.proceedhub.modules.user.domain;
 
-import lombok.Value;
-
-@Value
-public class UserId {
-    private final String value;
+public record UserId(String value) {
+    public UserId {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("User id is required");
+        }
+    }
 }

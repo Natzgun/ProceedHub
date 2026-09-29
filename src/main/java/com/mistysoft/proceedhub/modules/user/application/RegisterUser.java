@@ -2,39 +2,44 @@ package com.mistysoft.proceedhub.modules.user.application;
 
 import com.mistysoft.proceedhub.modules.user.domain.*;
 
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.Set;
 import java.util.UUID;
+import java.util.Locale;
 
 @Service
 public class RegisterUser {
 
-    private final IUserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final UserRepository userRepository;
+    private final PasswordHasher passwordHasher;
 
 
-    public RegisterUser(IUserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public RegisterUser(UserRepository userRepository, PasswordHasher passwordHasher) {
         this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
+        this.passwordHasher = passwordHasher;
     }
 
-    public User execute(String username, String email,String rawPassword, Set<Role> roles) {
+    public User execute(String username, String email, String rawPassword) {
+        if (username == null || username.isBlank() || email == null || email.isBlank()
+                || rawPassword == null || rawPassword.isBlank()) {
+            throw new IllegalArgumentException("Username, email and password are required");
+        }
+        username = username.trim();
+        email = email.trim().toLowerCase(Locale.ROOT);
+        if (!email.contains("@")) {
+            throw new IllegalArgumentException("Invalid email");
+        }
         if (userRepository.findByUsername(username).isPresent()) {
             throw new IllegalArgumentException("User with this username already exists");
         }
+        if (userRepository.findByEmail(email).isPresent()) {
+            throw new IllegalArgumentException("User with this email already exists");
+        }
 
         UserId userId = new UserId(UUID.randomUUID().toString());
-        String hashedPassword = passwordEncoder.encode(rawPassword);
+        String hashedPassword = passwordHasher.hash(rawPassword);
 
-        User user = User.builder()
-            .id(userId)
-            .username(username)
-            .email(email)
-            .password(hashedPassword)
-            .roles(roles)
-            .build();
+        User user = User.register(userId, username, email, hashedPassword);
         userRepository.save(user);
         return user;
     }

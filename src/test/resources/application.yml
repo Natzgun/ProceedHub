@@ -7,6 +7,7 @@ spring:
     username: sa
     password: password
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: update
     show-sql: true

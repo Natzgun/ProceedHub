@@ -1,4 +1,4 @@
-package com.mistysoft.proceedhub.modules.shared.security;
+package com.mistysoft.proceedhub.modules.user.infrastructure.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -31,6 +31,10 @@ public class JwtUtil {
                 .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    public long expirationSeconds() {
+        return expiration / 1000;
     }
 
     public Claims getClaimsFromToken(String token) {

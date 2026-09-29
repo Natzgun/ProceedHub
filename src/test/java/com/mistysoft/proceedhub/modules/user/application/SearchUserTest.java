@@ -17,7 +17,7 @@ import static org.mockito.Mockito.when;
 class SearchUserTest {
 
     @Mock
-    private IUserRepository userRepository;
+    private UserRepository userRepository;
 
     @InjectMocks
     private SearchUser searchUser;
@@ -30,10 +30,8 @@ class SearchUserTest {
     @Test
     void testSearchUserFound() {
         String username = "testuser";
-        User user = User.builder()
-                .id(new UserId(UUID.randomUUID().toString()))
-                .username(username)
-                .build();
+        User user = User.register(new UserId(UUID.randomUUID().toString()),
+                username, "test@example.com", "hash");
         when(userRepository.findByUsername(username)).thenReturn(Optional.of(user));
 
         Optional<User> result = searchUser.findByUsername(username);

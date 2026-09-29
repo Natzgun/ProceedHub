@@ -1,4 +1,4 @@
-package com.mistysoft.proceedhub.modules.shared.config;
+package com.mistysoft.proceedhub.apps.backend.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;

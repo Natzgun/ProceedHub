@@ -10,21 +10,16 @@ public class UserMapper {
 
     public static UserEntity toEntity(User user) {
         UserEntity entity = new UserEntity();
-        entity.setId(user.getId().getValue());
+        entity.setId(user.getId().value());
         entity.setUsername(user.getUsername());
         entity.setEmail(user.getEmail());
-        entity.setPassword(user.getPassword());
+        entity.setPassword(user.getPasswordHash());
         entity.setRoles(user.getRoles());
         return entity;
     }
 
     public static User toDomain(UserEntity entity) {
-        return User.builder()
-            .id(new UserId(entity.getId()))
-            .username(entity.getUsername())
-            .email(entity.getEmail())
-            .password(entity.getPassword())
-            .roles(entity.getRoles())
-            .build();
+        return User.restore(new UserId(entity.getId()), entity.getUsername(), entity.getEmail(),
+                entity.getPassword(), entity.getRoles());
     }
 }

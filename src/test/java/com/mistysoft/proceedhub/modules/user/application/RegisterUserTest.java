@@ -1,73 +1,38 @@
 package com.mistysoft.proceedhub.modules.user.application;
 
 import com.mistysoft.proceedhub.modules.user.domain.*;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.springframework.security.crypto.password.PasswordEncoder;
-
 import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 class RegisterUserTest {
+    private final UserRepository repository = mock(UserRepository.class);
+    private final PasswordHasher hasher = mock(PasswordHasher.class);
+    private final RegisterUser register = new RegisterUser(repository, hasher);
 
-    @Mock
-    private IUserRepository userRepository;
-
-    @Mock
-    private PasswordEncoder passwordEncoder;
-
-    @InjectMocks
-    private RegisterUser registerUser;
-
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
+    @Test
+    void registersOnlyUserRoleWithHashedPassword() {
+        when(hasher.hash("secret")).thenReturn("hashed");
+        User user = register.execute("alice", "alice@example.com", "secret");
+        assertEquals("hashed", user.getPasswordHash());
+        assertEquals(java.util.Set.of(Role.USER), user.getRoles());
+        verify(repository).save(user);
     }
 
     @Test
-    void testRegisterUserRegisteredSuccessfully() {
-        String username = "testuser";
-        String email = "testuser@example.com";
-        String rawPassword = "password";
-        String encodedPassword = "encodedPassword";
-        Set<Role> roles = Set.of();
-
-        when(userRepository.findByUsername(username)).thenReturn(Optional.empty());
-        when(passwordEncoder.encode(rawPassword)).thenReturn(encodedPassword);
-
-        User result = registerUser.execute(username, email, rawPassword, roles);
-
-        assertEquals(username, result.getUsername());
-        assertEquals(email, result.getEmail());
-        assertEquals(encodedPassword, result.getPassword());
-        assertEquals(roles, result.getRoles());
+    void rejectsDuplicateUsernameOrEmail() {
+        User existing = User.register(new UserId("id"), "alice", "alice@example.com", "hash");
+        when(repository.findByUsername("alice")).thenReturn(Optional.of(existing));
+        assertThrows(IllegalArgumentException.class, () -> register.execute("alice", "other@example.com", "secret"));
+        when(repository.findByEmail("alice@example.com")).thenReturn(Optional.of(existing));
+        assertThrows(IllegalArgumentException.class, () -> register.execute("other", "alice@example.com", "secret"));
+        verify(repository, never()).save(any());
     }
 
     @Test
-    void testRegisterUserAlreadyExists() {
-        String username = "testuser";
-        String email = "testuser@example.com";
-        String rawPassword = "password";
-        Set<Role> roles = Set.of();
-
-        User existingUser = User.builder()
-                .id(new UserId(UUID.randomUUID().toString()))
-                .username(username)
-                .email(email)
-                .password("existingPassword")
-                .roles(roles)
-                .build();
-
-        when(userRepository.findByUsername(username)).thenReturn(Optional.of(existingUser));
-
-        assertThrows(IllegalArgumentException.class, () -> registerUser.execute(username, email, rawPassword, roles));
+    void rejectsEmptyInputBeforeHashing() {
+        assertThrows(IllegalArgumentException.class, () -> register.execute("alice", "a@b.com", " "));
+        verifyNoInteractions(repository, hasher);
     }
 }
