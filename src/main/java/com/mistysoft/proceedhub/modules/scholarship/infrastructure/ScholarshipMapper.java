@@ -1,6 +1,8 @@
 package com.mistysoft.proceedhub.modules.scholarship.infrastructure;
 
 import com.mistysoft.proceedhub.modules.scholarship.domain.*;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class ScholarshipMapper {
 
@@ -18,7 +20,11 @@ public class ScholarshipMapper {
         entity.setCountry(scholarship.getCountry());
         entity.setContinent(scholarship.getContinent());
         entity.setMoreInfo(scholarship.getMoreInfo());
-        entity.setRequirements(scholarship.getRequirements());        
+        entity.setRequirements(scholarship.getRequirements().stream().map(requirement -> {
+            RequirementEmbeddable value = new RequirementEmbeddable();
+            value.setName(requirement.name());
+            return value;
+        }).collect(Collectors.toSet()));
         return entity;
     }
 
@@ -32,7 +38,8 @@ public class ScholarshipMapper {
                 .country(entity.getCountry())
                 .continent(entity.getContinent())
                 .moreInfo(entity.getMoreInfo())
-                .requirements(entity.getRequirements())
+                .requirements(entity.getRequirements() == null ? Set.of() : entity.getRequirements().stream()
+                        .map(requirement -> new Requirement(requirement.getName())).collect(Collectors.toSet()))
                 .build();
     }
 

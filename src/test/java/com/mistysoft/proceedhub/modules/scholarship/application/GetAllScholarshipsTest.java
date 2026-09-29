@@ -41,7 +41,7 @@ class GetAllScholarshipsTest {
                 .country("Country 1")
                 .continent("Continent 1")
                 .moreInfo("More Info 1")
-                .requirements(Set.of(new Requirement()))
+                .requirements(Set.of(new Requirement("Proof of enrollment")))
                 .build();
 
         Scholarship scholarship2 = Scholarship.builder()
@@ -53,7 +53,7 @@ class GetAllScholarshipsTest {
                 .country("Country 2")
                 .continent("Continent 2")
                 .moreInfo("More Info 2")
-                .requirements(Set.of(new Requirement()))
+                .requirements(Set.of(new Requirement("Proof of enrollment")))
                 .build();
 
         List<Scholarship> scholarships = List.of(scholarship1, scholarship2);

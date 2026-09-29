@@ -42,7 +42,7 @@ class CreateScholarshipTest {
                 .country("Test Country")
                 .continent("Test Continent")
                 .moreInfo("Test More Info")
-                .requirements(Set.of(new Requirement()))
+                .requirements(Set.of(new Requirement("Proof of enrollment")))
                 .build();
 
         createScholarship.execute(request);

@@ -1,6 +1,5 @@
 package com.mistysoft.proceedhub.modules.scholarship.infrastructure;
 
-import com.mistysoft.proceedhub.modules.scholarship.domain.Requirement;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -39,6 +38,6 @@ public class ScholarshipEntity {
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "scholarship_requirements", joinColumns = @JoinColumn(name = "scholarship_id"))
-    private Set<Requirement> requirements;
+    private Set<RequirementEmbeddable> requirements;
 
 }

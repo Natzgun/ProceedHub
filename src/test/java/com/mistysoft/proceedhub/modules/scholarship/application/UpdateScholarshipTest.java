@@ -333,7 +333,7 @@ class UpdateScholarshipTest {
         String id = UUID.randomUUID().toString();
         Scholarship existingScholarship = Scholarship.builder()
                 .id(id)
-                .requirements(Set.of(new Requirement()))
+                .requirements(Set.of(new Requirement("Proof of enrollment")))
                 .build();
 
         ScholarshipDTO request = ScholarshipDTO.builder()
