@@ -3,20 +3,26 @@ package com.mistysoft.proceedhub.modules.scholarship.application.dto;
 import com.mistysoft.proceedhub.modules.scholarship.domain.Requirement;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
 import java.time.ZonedDateTime;
 import java.util.Set;
 
 @Getter
+@Setter
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class ScholarshipDTO {
-    private final String id;
-    private final String title;
-    private final String description;
-    private final ZonedDateTime date;
-    private final String image;
-    private final String country;
-    private final String continent;
-    private final String moreInfo;
-    private final Set<Requirement> requirements;
+    private String id;
+    private String title;
+    private String description;
+    private ZonedDateTime date;
+    private String image;
+    private String country;
+    private String continent;
+    private String moreInfo;
+    private Set<Requirement> requirements;
 }
