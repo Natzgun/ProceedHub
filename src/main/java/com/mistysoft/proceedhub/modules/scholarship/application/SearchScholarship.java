@@ -14,6 +14,6 @@ public class SearchScholarship {
 
     public Scholarship execute(String id) {
         return scholarshipRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Scholarship not found"));
+                .orElseThrow(() -> new ScholarshipNotFoundException(id));
     }
 }

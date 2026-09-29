@@ -16,6 +16,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
+import static com.mistysoft.proceedhub.modules.scholarship.ScholarshipFixtures.sample;
 
 class ScholarshipControllerTest {
 
@@ -45,7 +46,7 @@ class ScholarshipControllerTest {
     @Test
     void testCreateScholarship() {
         ScholarshipDTO scholarshipDTO = ScholarshipDTO.builder().build();
-        Scholarship scholarship = Scholarship.builder().build();
+        Scholarship scholarship = sample("created");
 
         when(createScholarship.execute(scholarshipDTO)).thenReturn(scholarship);
 
@@ -59,7 +60,7 @@ class ScholarshipControllerTest {
     @Test
     void testGetScholarshipById() {
         String id = UUID.randomUUID().toString();
-        Scholarship scholarship = Scholarship.builder().build();
+        Scholarship scholarship = sample(id);
         when(searchScholarship.execute(id)).thenReturn(scholarship);
 
         ResponseEntity<Scholarship> response = scholarshipController.getScholarshipById(id);
@@ -71,8 +72,8 @@ class ScholarshipControllerTest {
 
     @Test
     void testGetAllScholarships() {
-        Scholarship scholarship1 = Scholarship.builder().build();
-        Scholarship scholarship2 = Scholarship.builder().build();
+        Scholarship scholarship1 = sample("first");
+        Scholarship scholarship2 = sample("second");
         List<Scholarship> scholarships = List.of(scholarship1, scholarship2);
         when(getAllScholarships.execute()).thenReturn(scholarships);
 
@@ -87,7 +88,7 @@ class ScholarshipControllerTest {
     void testUpdateScholarship() {
         String id = UUID.randomUUID().toString();
         ScholarshipDTO scholarshipDTO = ScholarshipDTO.builder().build();
-        Scholarship scholarship = Scholarship.builder().build();
+        Scholarship scholarship = sample(id);
 
         when(updateScholarship.execute(scholarshipDTO, id)).thenReturn(scholarship);
 

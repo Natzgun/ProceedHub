@@ -15,6 +15,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import static com.mistysoft.proceedhub.modules.scholarship.ScholarshipFixtures.sample;
 
 class JpaScholarshipRepositoryTest {
 
@@ -31,12 +32,7 @@ class JpaScholarshipRepositoryTest {
 
     @Test
     void testSave() {
-        Scholarship scholarship = Scholarship.builder()
-                .id("id")
-                .title("title")
-                .description("description")
-                .requirements(Set.of())
-                .build();
+        Scholarship scholarship = sample("id");
         ScholarshipEntity scholarshipEntity = ScholarshipMapper.toEntity(scholarship);
 
         jpaScholarshipRepository.save(scholarship);
@@ -49,8 +45,7 @@ class JpaScholarshipRepositoryTest {
     @Test
     void testFindById() {
         String id = "id";
-        ScholarshipEntity scholarshipEntity = new ScholarshipEntity();
-        scholarshipEntity.setId(id);
+        ScholarshipEntity scholarshipEntity = ScholarshipMapper.toEntity(sample(id));
         when(repository.findById(id)).thenReturn(Optional.of(scholarshipEntity));
 
         Optional<Scholarship> result = jpaScholarshipRepository.findById(id);
@@ -61,10 +56,8 @@ class JpaScholarshipRepositoryTest {
 
     @Test
     void testFindAll() {
-        ScholarshipEntity scholarshipEntity1 = new ScholarshipEntity();
-        scholarshipEntity1.setId("id1");
-        ScholarshipEntity scholarshipEntity2 = new ScholarshipEntity();
-        scholarshipEntity2.setId("id2");
+        ScholarshipEntity scholarshipEntity1 = ScholarshipMapper.toEntity(sample("id1"));
+        ScholarshipEntity scholarshipEntity2 = ScholarshipMapper.toEntity(sample("id2"));
 
         when(repository.findAll()).thenReturn(List.of(scholarshipEntity1, scholarshipEntity2));
 

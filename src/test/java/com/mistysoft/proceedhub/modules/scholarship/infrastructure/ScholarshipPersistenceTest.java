@@ -11,6 +11,7 @@ import java.time.ZonedDateTime;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static com.mistysoft.proceedhub.modules.scholarship.ScholarshipFixtures.sample;
 
 @SpringBootTest
 @Transactional
@@ -19,11 +20,7 @@ class ScholarshipPersistenceTest {
 
     @Test
     void requirementsSurviveJpaRoundTripWithoutPersistingDomainObjects() {
-        Scholarship scholarship = Scholarship.builder()
-                .id("scholarship-1").title("Research grant").description("Research funding")
-                .date(ZonedDateTime.now()).image("https://example.com/image.png")
-                .country("Peru").continent("South America").moreInfo("https://example.com")
-                .requirements(Set.of(new Requirement("Proof of enrollment"))).build();
+        Scholarship scholarship = sample("scholarship-1");
 
         adapter.save(scholarship);
         Scholarship restored = adapter.findById(scholarship.getId()).orElseThrow();

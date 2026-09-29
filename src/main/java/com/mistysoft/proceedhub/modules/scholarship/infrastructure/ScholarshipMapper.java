@@ -29,18 +29,11 @@ public class ScholarshipMapper {
     }
 
     public static Scholarship toDomain(ScholarshipEntity entity) {
-        return Scholarship.builder()
-                .id(entity.getId())
-                .title(entity.getTitle())
-                .description(entity.getDescription())
-                .date(entity.getDate())
-                .image(entity.getImage())
-                .country(entity.getCountry())
-                .continent(entity.getContinent())
-                .moreInfo(entity.getMoreInfo())
-                .requirements(entity.getRequirements() == null ? Set.of() : entity.getRequirements().stream()
-                        .map(requirement -> new Requirement(requirement.getName())).collect(Collectors.toSet()))
-                .build();
+        return Scholarship.restore(entity.getId(), new ScholarshipChanges(
+                entity.getTitle(), entity.getDescription(), entity.getDate(), entity.getImage(),
+                entity.getCountry(), entity.getContinent(), entity.getMoreInfo(),
+                entity.getRequirements() == null ? Set.of() : entity.getRequirements().stream()
+                        .map(requirement -> new Requirement(requirement.getName())).collect(Collectors.toSet())));
     }
 
 }
