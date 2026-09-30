@@ -67,6 +67,14 @@ public class UserController {
         return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(UserResponse.from(user));
     }
 
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(HttpServletRequest request) {
+        ResponseCookie cookie = ResponseCookie.from("token", "")
+                .httpOnly(true).secure(request.isSecure()).sameSite("Lax")
+                .path("/").maxAge(0).build();
+        return ResponseEntity.noContent().header(HttpHeaders.SET_COOKIE, cookie.toString()).build();
+    }
+
     @GetMapping("/{username}")
     public ResponseEntity<UserResponse> getUserByUsername(@PathVariable String username, Authentication authentication) {
         if (!username.equals(authentication.getName()) && authentication.getAuthorities().stream()

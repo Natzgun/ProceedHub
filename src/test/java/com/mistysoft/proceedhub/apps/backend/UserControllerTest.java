@@ -118,6 +118,14 @@ class UserControllerTest {
                         {"username":"alice","password":"wrong"}
                         """))
                 .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/users/logout").with(csrfCookie())
+                .cookie(new Cookie("token", jwt.generateToken("alice"))))
+                .andExpect(status().isNoContent())
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("Max-Age=0")))
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("HttpOnly")));
+        mvc.perform(post("/api/users/logout").cookie(new Cookie("token", jwt.generateToken("alice"))))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/users/logout").with(csrfCookie())).andExpect(status().isUnauthorized());
     }
 
     @Test
