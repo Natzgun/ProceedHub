@@ -1,0 +1,16 @@
+.git
+.atl
+.gradle
+.idea
+build
+app
+.env
+.env.*
+*.env
+*.env.*
+**/*.env
+**/*.env.*
+docker-compose.yml
+k8s
+**/*.dump
+**/*.sql

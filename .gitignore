@@ -38,3 +38,11 @@ out/
 
 ### APP
 app/
+
+# Local Kubernetes credentials and database exports
+/docker-compose.yml
+/.env
+/.env.*
+/k8s/*.env
+/k8s/*.dump
+/k8s/*.sql
