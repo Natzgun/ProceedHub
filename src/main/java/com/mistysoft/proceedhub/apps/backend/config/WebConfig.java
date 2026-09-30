@@ -1,4 +1,4 @@
-package com.mistysoft.proceedhub.modules.shared.config;
+package com.mistysoft.proceedhub.apps.backend.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -6,8 +6,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import java.util.Arrays;
+
 @Configuration
 public class WebConfig {
+    @Value("${cors.allowedOrigins:http://localhost:5173}")
     private String allowedOrigins;
 
     @Bean
@@ -16,9 +19,10 @@ public class WebConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
-                    .allowedOrigins(allowedOrigins)
-                    .allowedMethods("GET", "POST", "PUT", "DELETE")
-                    .allowedHeaders("*")
+                    .allowedOrigins(Arrays.stream(allowedOrigins.split(","))
+                            .map(String::trim).toArray(String[]::new))
+                    .allowedMethods("GET", "POST", "DELETE")
+                    .allowedHeaders("Content-Type", "X-XSRF-TOKEN")
                     .allowCredentials(true);
             }
         };

@@ -1,112 +1,111 @@
 package com.mistysoft.proceedhub.apps.backend;
 
-import com.mistysoft.proceedhub.modules.scholarship.application.*;
-import com.mistysoft.proceedhub.modules.scholarship.application.dto.ScholarshipDTO;
-import com.mistysoft.proceedhub.modules.scholarship.domain.Scholarship;
+import com.mistysoft.proceedhub.modules.scholarship.infrastructure.ISpringDataScholarshipRepository;
+import com.mistysoft.proceedhub.modules.user.domain.*;
+import com.mistysoft.proceedhub.modules.user.infrastructure.ISpringDataUserRepository;
+import com.mistysoft.proceedhub.modules.user.infrastructure.UserMapper;
+import com.mistysoft.proceedhub.modules.user.infrastructure.security.JwtUtil;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@SpringBootTest
+@AutoConfigureMockMvc
+@Transactional
 class ScholarshipControllerTest {
-
-    @Mock
-    private CreateScholarship createScholarship;
-
-    @Mock
-    private UpdateScholarship updateScholarship;
-
-    @Mock
-    private GetAllScholarships getAllScholarships;
-
-    @Mock
-    private SearchScholarship searchScholarship;
-
-    @Mock
-    private DeleteScholarship deleteScholarship;
-
-    @InjectMocks
-    private ScholarshipController scholarshipController;
+    @Autowired MockMvc mvc;
+    @Autowired ISpringDataUserRepository users;
+    @Autowired ISpringDataScholarshipRepository scholarships;
+    @Autowired JwtUtil jwt;
 
     @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
+    void seedAdmin() {
+        scholarships.deleteAll();
+        users.deleteAll();
+        users.save(UserMapper.toEntity(User.restore(new UserId("admin-id"), "admin",
+                "admin@example.com", "hash", Set.of(Role.ADMIN))));
+    }
+
+    private RequestPostProcessor adminRequest() {
+        return request -> {
+            request.setCookies(new Cookie("token", jwt.generateToken("admin")),
+                    new Cookie("XSRF-TOKEN", "test-token"));
+            request.addHeader("X-XSRF-TOKEN", "test-token");
+            return request;
+        };
     }
 
     @Test
-    void testCreateScholarship() {
-        ScholarshipDTO scholarshipDTO = ScholarshipDTO.builder().build();
-        Scholarship scholarship = Scholarship.builder().build();
+    void managesScholarshipsThroughHttpWithoutExposingTheDomain() throws Exception {
+        String payload = """
+                {"title":"Research grant","description":"For students","date":"2020-01-01T00:00:00Z",
+                 "image":"https://example.com/image.png","country":"Peru","continent":"South America",
+                 "moreInfo":"https://example.com","requirements":[{"name":"Proof of enrollment"}]}
+                """;
+        var createResponse = mvc.perform(post("/api/scholarships/create").with(adminRequest())
+                        .contentType(MediaType.APPLICATION_JSON).content(payload))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.title").value("Research grant"))
+                .andExpect(jsonPath("$.requirements[0].name").value("Proof of enrollment"))
+                .andReturn().getResponse();
+        String id = com.jayway.jsonpath.JsonPath.read(createResponse.getContentAsString(), "$.id");
+        org.junit.jupiter.api.Assertions.assertFalse(createResponse.getContentAsString()
+                .contains("2020-01-01"));
 
-        when(createScholarship.execute(scholarshipDTO)).thenReturn(scholarship);
+        mvc.perform(get("/api/scholarships/{id}", id)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("Research grant"))
+                .andExpect(jsonPath("$.requirements[0].name").value("Proof of enrollment"));
+        mvc.perform(get("/api/scholarships/get_all")).andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(id));
 
-        ResponseEntity<String> response = scholarshipController.createScholarship(scholarshipDTO);
+        mvc.perform(post("/api/scholarships/update/{id}", id).with(adminRequest())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title":"Updated grant","requirements":[]}
+                                """))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.title").value("Updated grant"))
+                .andExpect(jsonPath("$.description").value("For students"))
+                .andExpect(jsonPath("$.requirements").isEmpty());
+        mvc.perform(get("/api/scholarships/{id}", id)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("Updated grant"))
+                .andExpect(jsonPath("$.requirements").isEmpty());
 
-        assertEquals(HttpStatus.CREATED, response.getStatusCode());
-        assertEquals("Scholarship created successfully", response.getBody());
-        verify(createScholarship, times(1)).execute(scholarshipDTO);
+        mvc.perform(delete("/api/scholarships/delete/{id}", id).with(adminRequest()))
+                .andExpect(status().isNoContent());
+        mvc.perform(get("/api/scholarships/{id}", id)).andExpect(status().isNotFound());
     }
 
     @Test
-    void testGetScholarshipById() {
-        String id = UUID.randomUUID().toString();
-        Scholarship scholarship = Scholarship.builder().build();
-        when(searchScholarship.execute(id)).thenReturn(scholarship);
-
-        ResponseEntity<Scholarship> response = scholarshipController.getScholarshipById(id);
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(scholarship, response.getBody());
-        verify(searchScholarship, times(1)).execute(id);
-    }
-
-    @Test
-    void testGetAllScholarships() {
-        Scholarship scholarship1 = Scholarship.builder().build();
-        Scholarship scholarship2 = Scholarship.builder().build();
-        List<Scholarship> scholarships = List.of(scholarship1, scholarship2);
-        when(getAllScholarships.execute()).thenReturn(scholarships);
-
-        ResponseEntity<List<Scholarship>> response = scholarshipController.getAllScholarships();
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(scholarships, response.getBody());
-        verify(getAllScholarships, times(1)).execute();
-    }
-
-    @Test
-    void testUpdateScholarship() {
-        String id = UUID.randomUUID().toString();
-        ScholarshipDTO scholarshipDTO = ScholarshipDTO.builder().build();
-        Scholarship scholarship = Scholarship.builder().build();
-
-        when(updateScholarship.execute(scholarshipDTO, id)).thenReturn(scholarship);
-
-        ResponseEntity<String> response = scholarshipController.updateScholarship(scholarshipDTO, id);
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("Scholarship updated successfully", response.getBody());
-        verify(updateScholarship, times(1)).execute(scholarshipDTO, id);
-    }
-
-    @Test
-    void testDeleteScholarship() {
-        String id = UUID.randomUUID().toString();
-        doNothing().when(deleteScholarship).execute(id);
-
-        ResponseEntity<String> response = scholarshipController.deleteScholarship(id);
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("Scholarship deleted successfully", response.getBody());
-        verify(deleteScholarship, times(1)).execute(id);
+    void rejectsInvalidOrMissingScholarshipsWithMeaningfulStatus() throws Exception {
+        mvc.perform(post("/api/scholarships/create").with(adminRequest())
+                        .contentType(MediaType.APPLICATION_JSON).content("""
+                                {"title":" "}
+                                """))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/scholarships/create").with(adminRequest())
+                        .contentType(MediaType.APPLICATION_JSON).content("""
+                                {"title":"Grant","requirements":[{"name":" "}]}
+                                """))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/scholarships/missing")).andExpect(status().isNotFound());
+        mvc.perform(post("/api/scholarships/update/missing").with(adminRequest())
+                        .contentType(MediaType.APPLICATION_JSON).content("""
+                                {"title":"Updated"}
+                                """))
+                .andExpect(status().isNotFound());
+        mvc.perform(delete("/api/scholarships/delete/missing").with(adminRequest()))
+                .andExpect(status().isNotFound());
     }
 }

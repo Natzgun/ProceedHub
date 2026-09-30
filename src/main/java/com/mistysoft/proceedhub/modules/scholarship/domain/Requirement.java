@@ -1,10 +1,10 @@
 package com.mistysoft.proceedhub.modules.scholarship.domain;
 
-import jakarta.persistence.Embeddable;
-import lombok.Data;
-
-@Embeddable
-@Data
-public class Requirement {
-    private String name;
+public record Requirement(String name) {
+    public Requirement {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Requirement name is required");
+        }
+        name = name.trim();
+    }
 }

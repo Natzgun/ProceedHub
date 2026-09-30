@@ -7,6 +7,7 @@ spring:
     username: sa
     password: password
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: update
     show-sql: true
@@ -15,8 +16,8 @@ spring:
         dialect: org.hibernate.dialect.H2Dialect
 
 server:
-  port: ${PORT}
+  port: 0
 
 jwt:
-  secret: ${JWT_TOKEN}
-  expiration: ${JWT_EXPIRATION}
+  secret: test-only-secret-key-at-least-32-characters-long
+  expiration: 3600000

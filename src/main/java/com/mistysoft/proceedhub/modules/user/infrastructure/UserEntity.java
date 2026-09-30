@@ -2,19 +2,24 @@ package com.mistysoft.proceedhub.modules.user.infrastructure;
 
 import com.mistysoft.proceedhub.modules.user.domain.Role;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.Set;
 
 @Entity
 @Table(name = "users")
-@Data
+@Getter
+@Setter
 public class UserEntity {
 
     @Id
     private String id;
+    @Column(nullable = false, unique = true)
     private String username;
+    @Column(nullable = false, unique = true)
     private String email;
+    @Column(nullable = false)
     private String password;
 
     @ElementCollection(fetch = FetchType.EAGER)

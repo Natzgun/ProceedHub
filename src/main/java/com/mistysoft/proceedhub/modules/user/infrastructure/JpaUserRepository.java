@@ -6,7 +6,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public class JpaUserRepository implements IUserRepository {
+public class JpaUserRepository implements UserRepository {
 
     private final ISpringDataUserRepository repository;
 
@@ -24,5 +24,10 @@ public class JpaUserRepository implements IUserRepository {
     public Optional<User> findByUsername(String username) {
         return repository.findByUsername(username)
                 .map(UserMapper::toDomain);
+    }
+
+    @Override
+    public Optional<User> findByEmail(String email) {
+        return repository.findByEmail(email).map(UserMapper::toDomain);
     }
 }

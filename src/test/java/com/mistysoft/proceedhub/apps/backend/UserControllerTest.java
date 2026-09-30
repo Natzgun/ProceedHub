@@ -1,228 +1,144 @@
 package com.mistysoft.proceedhub.apps.backend;
 
-import com.mistysoft.proceedhub.modules.shared.security.JwtUtil;
-import com.mistysoft.proceedhub.modules.user.application.LoginUser;
-import com.mistysoft.proceedhub.modules.user.application.RegisterUser;
-import com.mistysoft.proceedhub.modules.user.application.SearchUser;
-import com.mistysoft.proceedhub.modules.user.application.dto.UserDTO;
-import com.mistysoft.proceedhub.modules.user.domain.User;
-import com.mistysoft.proceedhub.modules.user.domain.UserId;
-import io.jsonwebtoken.Claims;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletResponse;
+import com.mistysoft.proceedhub.modules.user.infrastructure.security.JwtUtil;
+import com.mistysoft.proceedhub.modules.user.domain.*;
+import com.mistysoft.proceedhub.modules.user.infrastructure.ISpringDataUserRepository;
+import com.mistysoft.proceedhub.modules.user.infrastructure.UserMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-
-import java.util.Objects;
-import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
+import jakarta.servlet.http.Cookie;
 import java.util.Set;
-import java.util.UUID;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.*;
-
+@SpringBootTest
+@AutoConfigureMockMvc
+@Transactional
 class UserControllerTest {
+    @Autowired MockMvc mvc;
+    @Autowired ISpringDataUserRepository users;
+    @Autowired JwtUtil jwt;
 
-    @Mock
-    private RegisterUser registerUser;
-
-    @Mock
-    private LoginUser loginUser;
-
-    @Mock
-    private SearchUser searchUser;
-
-    @Mock
-    private JwtUtil jwtUtil;
-
-    @InjectMocks
-    private UserController userController;
+    private static RequestPostProcessor csrfCookie() {
+        return request -> {
+            Cookie[] existing = request.getCookies();
+            Cookie[] cookies = java.util.Arrays.copyOf(existing == null ? new Cookie[0] : existing,
+                    (existing == null ? 0 : existing.length) + 1);
+            cookies[cookies.length - 1] = new Cookie("XSRF-TOKEN", "test-csrf-token");
+            request.setCookies(cookies);
+            request.addHeader("X-XSRF-TOKEN", "test-csrf-token");
+            return request;
+        };
+    }
 
     @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
+    void reset() {
+        users.deleteAll();
     }
 
     @Test
-    void testCreateUser() {
-        UserId userId = new UserId(UUID.randomUUID().toString());
-        User user = User.builder()
-                .id(userId)
-                .username("testuser")
-                .email("test@example.com")
-                .password("password")
-                .roles(Set.of())
-                .build();
-
-        when(registerUser.execute(user.getUsername(), user.getEmail(), user.getPassword(), user.getRoles())).thenReturn(user);
-
-        ResponseEntity<String> response = userController.createUser(user);
-
-        assertEquals(HttpStatus.CREATED, response.getStatusCode());
-        assertEquals("User created successfully", response.getBody());
-        verify(registerUser, times(1)).execute(user.getUsername(), user.getEmail(), user.getPassword(), user.getRoles());
+    void registrationDoesNotAcceptClientProvidedAdminRole() throws Exception {
+        mvc.perform(post("/api/users/register").with(csrfCookie()).contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"alice","email":"alice@example.com","password":"secret","roles":["ADMIN"]}
+                                """))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.roles[0]").value("USER"))
+                .andExpect(jsonPath("$.password").doesNotExist());
+        mvc.perform(post("/api/users/register").with(csrfCookie()).contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"bob","email":"alice@example.com","password":"secret"}
+                                """))
+                .andExpect(status().isConflict());
     }
 
     @Test
-    void testLoginUser() {
-        UserId userId = new UserId(UUID.randomUUID().toString());
-        User user = User.builder()
-                .id(userId)
-                .username("testuser")
-                .password("password")
-                .build();
-
-        HttpServletResponse response = mock(HttpServletResponse.class);
-        String token = "testtoken";
-
-        doNothing().when(loginUser).execute(user.getUsername(), user.getPassword());
-        when(jwtUtil.generateToken(user.getUsername())).thenReturn(token);
-
-        ResponseEntity<String> result = userController.loginUser(user, response);
-
-        assertEquals(HttpStatus.OK, result.getStatusCode());
-        assertEquals("Login successful", result.getBody());
-        verify(loginUser, times(1)).execute(user.getUsername(), user.getPassword());
-        verify(jwtUtil, times(1)).generateToken(user.getUsername());
-        verify(response, times(1)).addCookie(any(Cookie.class));
+    void cookieAuthenticationEnforcesRolesAndOwnership() throws Exception {
+        users.save(UserMapper.toEntity(User.restore(new UserId("1"), "admin", "admin@example.com",
+                "hash", Set.of(Role.ADMIN))));
+        users.save(UserMapper.toEntity(User.register(new UserId("2"), "alice", "alice@example.com", "hash")));
+        String body = """
+                {"title":"Scholarship"}
+                """;
+        mvc.perform(post("/api/scholarships/create").with(csrfCookie()).contentType(MediaType.APPLICATION_JSON)
+                        .content(body)).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/scholarships/create").with(csrfCookie()).cookie(new Cookie("token", jwt.generateToken("alice")))
+                        .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isForbidden());
+        String fullBody = """
+                {"title":"Scholarship","description":"For students","image":"https://example.com/a.png",
+                 "country":"Peru","continent":"South America","moreInfo":"https://example.com","requirements":[]}
+                """;
+        Cookie adminToken = new Cookie("token", jwt.generateToken("admin"));
+        mvc.perform(post("/api/scholarships/create").cookie(adminToken)
+                .contentType(MediaType.APPLICATION_JSON).content(fullBody)).andExpect(status().isForbidden());
+        mvc.perform(post("/api/scholarships/create").with(csrfCookie()).cookie(adminToken)
+                .contentType(MediaType.APPLICATION_JSON).content(fullBody)).andExpect(status().isCreated());
+        mvc.perform(get("/api/users/admin").cookie(new Cookie("token", jwt.generateToken("alice"))))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/users/verifyToken").cookie(new Cookie("token", jwt.generateToken("alice"))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.username").value("alice"));
+        mvc.perform(get("/api/users/verifyToken").cookie(new Cookie("token", "invalid")))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/users/verifyToken")).andExpect(status().isUnauthorized());
     }
 
     @Test
-    void testLoginUserInvalid() {
-        UserId userId = new UserId(UUID.randomUUID().toString());
-        User user = User.builder()
-                .id(userId)
-                .username("testuser")
-                .password("password")
-                .build();
-
-        HttpServletResponse response = mock(HttpServletResponse.class);
-
-        doThrow(new IllegalArgumentException("Invalid password")).when(loginUser).execute(user.getUsername(), user.getPassword());
-
-        ResponseEntity<String> result = userController.loginUser(user, response);
-
-        assertEquals(HttpStatus.UNAUTHORIZED, result.getStatusCode());
-        assertEquals("Invalid password", result.getBody());
-        verify(loginUser, times(1)).execute(user.getUsername(), user.getPassword());
-        verify(jwtUtil, never()).generateToken(user.getUsername());
-        verify(response, never()).addCookie(any(Cookie.class));
+    void loginSetsHttpOnlyCookieAndMutationsRequireCsrf() throws Exception {
+        mvc.perform(post("/api/users/register").contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"username":"alice","email":"alice@example.com","password":"secret"}
+                        """))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/users/csrf")).andExpect(status().isOk()).andExpect(jsonPath("$.token").exists());
+        mvc.perform(post("/api/users/register").with(csrfCookie()).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"username":"alice","email":"alice@example.com","password":"secret"}
+                        """))
+                .andExpect(status().isCreated());
+        mvc.perform(post("/api/users/login").with(csrfCookie()).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"username":"alice","password":"secret"}
+                        """))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("HttpOnly")))
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("Max-Age=3600")));
+        mvc.perform(post("/api/users/login").with(csrfCookie()).secure(true).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"username":"alice","password":"secret"}
+                        """))
+                .andExpect(status().isOk()).andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("Secure")));
+        mvc.perform(post("/api/users/login").with(csrfCookie()).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"username":"alice","password":"wrong"}
+                        """))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/users/logout").with(csrfCookie())
+                .cookie(new Cookie("token", jwt.generateToken("alice"))))
+                .andExpect(status().isNoContent())
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("Max-Age=0")))
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("HttpOnly")));
+        mvc.perform(post("/api/users/logout").cookie(new Cookie("token", jwt.generateToken("alice"))))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/users/logout").with(csrfCookie())).andExpect(status().isUnauthorized());
     }
 
     @Test
-    void testGetUserByUsername() {
-        String username = "testuser";
-        UserId userId = new UserId(UUID.randomUUID().toString());
-        User user = User.builder()
-                .id(userId)
-                .username(username)
-                .email("example@mail")
-                .roles(Set.of())
-                .build();
-
-        when(searchUser.findByUsername(username)).thenReturn(Optional.of(user));
-
-        ResponseEntity<UserDTO> response = userController.getUserByUsername(username);
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        //assert verifies that the members of the actual object are equal to the members of the expected object
-        assertEquals(Objects.requireNonNull(response.getBody()).getUsername(), user.getUsername());
-        assertEquals(response.getBody().getEmail(), user.getEmail());
-        assertEquals(response.getBody().getRoles(), user.getRoles());
-
-        verify(searchUser, times(1)).findByUsername(username);
-    }
-
-    @Test
-    void testGetUserByUsernameNotFound() {
-        String username = "testuser";
-
-        when(searchUser.findByUsername(username)).thenReturn(Optional.empty());
-
-        ResponseEntity<UserDTO> response = userController.getUserByUsername(username);
-
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-        verify(searchUser, times(1)).findByUsername(username);
-    }
-
-    @Test
-    void testVerifyToken() {
-        String token = "testtoken";
-        Claims claims = mock(Claims.class);
-        String username = "testuser";
-        UserId userId = new UserId(UUID.randomUUID().toString());
-        User user = User.builder()
-                .id(userId)
-                .username(username)
-                .email("example@mail")
-                .roles(Set.of())
-                .build();
-
-        when(jwtUtil.getClaimsFromToken(token)).thenReturn(claims);
-        when(claims.getSubject()).thenReturn(username);
-        when(searchUser.findByUsername(username)).thenReturn(Optional.of(user));
-
-        ResponseEntity<UserDTO> response = userController.verifyToken(token);
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(Objects.requireNonNull(response.getBody()).getUsername(), user.getUsername());
-        assertEquals(response.getBody().getEmail(), user.getEmail());
-        assertEquals(response.getBody().getRoles(), user.getRoles());
-        verify(jwtUtil, times(1)).getClaimsFromToken(token);
-        verify(searchUser, times(1)).findByUsername(username);
-    }
-
-    @Test
-    void testVerifyTokenEmpty() {
-        String token = "";
-
-        ResponseEntity<UserDTO> response = userController.verifyToken(token);
-
-        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
-        verify(jwtUtil, never()).getClaimsFromToken(token);
-    }
-
-    @Test
-    void testVerifyTokenNull() {
-        String token = null;
-
-        ResponseEntity<UserDTO> response = userController.verifyToken(token);
-
-        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
-        verify(jwtUtil, never()).getClaimsFromToken(token);
-    }
-
-    @Test
-    void testVerifyTokenInvalid() {
-        String token = "invalidtoken";
-
-        when(jwtUtil.getClaimsFromToken(token)).thenThrow(new RuntimeException());
-
-        ResponseEntity<UserDTO> response = userController.verifyToken(token);
-
-        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
-        verify(jwtUtil, times(1)).getClaimsFromToken(token);
-    }
-
-    @Test
-    void testVerifyTokenNotFound() {
-        String token = "testtoken";
-        Claims claims = mock(Claims.class);
-        String username = "testuser";
-
-        when(jwtUtil.getClaimsFromToken(token)).thenReturn(claims);
-        when(claims.getSubject()).thenReturn(username);
-        when(searchUser.findByUsername(username)).thenReturn(Optional.empty());
-
-        ResponseEntity<UserDTO> response = userController.verifyToken(token);
-
-        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
-        verify(jwtUtil, times(1)).getClaimsFromToken(token);
-        verify(searchUser, times(1)).findByUsername(username);
+    void csrfCookieAndHeaderAllowBrowserRegistration() throws Exception {
+        var csrfResponse = mvc.perform(get("/api/users/csrf")).andExpect(status().isOk()).andReturn().getResponse();
+        String token = com.jayway.jsonpath.JsonPath.read(csrfResponse.getContentAsString(), "$.token");
+        org.junit.jupiter.api.Assertions.assertTrue(csrfResponse.getHeaders("Set-Cookie").stream()
+                .anyMatch(cookie -> cookie.startsWith("XSRF-TOKEN=" + token + ";")));
+        Cookie csrfCookie = new Cookie("XSRF-TOKEN", token);
+        mvc.perform(post("/api/users/register").cookie(csrfCookie).header("X-XSRF-TOKEN", token)
+                .contentType(MediaType.APPLICATION_JSON).content("""
+                        {"username":"alice","email":"alice@example.com","password":"secret"}
+                        """))
+                .andExpect(status().isCreated());
     }
 }

@@ -1,5 +1,6 @@
-package com.mistysoft.proceedhub.modules.shared.security;
+package com.mistysoft.proceedhub.modules.user.infrastructure.security;
 
+import com.mistysoft.proceedhub.modules.user.application.TokenIssuer;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -11,7 +12,7 @@ import javax.crypto.SecretKey;
 import java.util.Date;
 
 @Component
-public class JwtUtil {
+public class JwtUtil implements TokenIssuer {
 
     @Value("${jwt.secret}")
     private String secret;
@@ -31,6 +32,11 @@ public class JwtUtil {
                 .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    @Override
+    public IssuedToken issue(String username) {
+        return new IssuedToken(generateToken(username), expiration / 1000);
     }
 
     public Claims getClaimsFromToken(String token) {

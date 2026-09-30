@@ -1,15 +1,16 @@
 package com.mistysoft.proceedhub.modules.scholarship.infrastructure;
 
-import com.mistysoft.proceedhub.modules.scholarship.domain.Requirement;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.ZonedDateTime;
 import java.util.Set;
 
 @Entity
 @Table(name = "scholarships")
-@Data
+@Getter
+@Setter
 public class ScholarshipEntity {
 
     @Id
@@ -39,6 +40,6 @@ public class ScholarshipEntity {
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "scholarship_requirements", joinColumns = @JoinColumn(name = "scholarship_id"))
-    private Set<Requirement> requirements;
+    private Set<RequirementEmbeddable> requirements;
 
 }

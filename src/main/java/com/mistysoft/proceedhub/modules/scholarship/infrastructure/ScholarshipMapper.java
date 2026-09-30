@@ -1,6 +1,8 @@
 package com.mistysoft.proceedhub.modules.scholarship.infrastructure;
 
 import com.mistysoft.proceedhub.modules.scholarship.domain.*;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class ScholarshipMapper {
 
@@ -18,22 +20,20 @@ public class ScholarshipMapper {
         entity.setCountry(scholarship.getCountry());
         entity.setContinent(scholarship.getContinent());
         entity.setMoreInfo(scholarship.getMoreInfo());
-        entity.setRequirements(scholarship.getRequirements());        
+        entity.setRequirements(scholarship.getRequirements().stream().map(requirement -> {
+            RequirementEmbeddable value = new RequirementEmbeddable();
+            value.setName(requirement.name());
+            return value;
+        }).collect(Collectors.toSet()));
         return entity;
     }
 
     public static Scholarship toDomain(ScholarshipEntity entity) {
-        return Scholarship.builder()
-                .id(entity.getId())
-                .title(entity.getTitle())
-                .description(entity.getDescription())
-                .date(entity.getDate())
-                .image(entity.getImage())
-                .country(entity.getCountry())
-                .continent(entity.getContinent())
-                .moreInfo(entity.getMoreInfo())
-                .requirements(entity.getRequirements())
-                .build();
+        return Scholarship.restore(entity.getId(), new ScholarshipChanges(
+                entity.getTitle(), entity.getDescription(), entity.getDate(), entity.getImage(),
+                entity.getCountry(), entity.getContinent(), entity.getMoreInfo(),
+                entity.getRequirements() == null ? Set.of() : entity.getRequirements().stream()
+                        .map(requirement -> new Requirement(requirement.getName())).collect(Collectors.toSet())));
     }
 
 }

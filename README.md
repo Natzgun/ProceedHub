@@ -30,10 +30,46 @@ El objetivo del proyecto es desarrollar una plataforma web accesible y moderna q
 ### Arquitectura de Software
 
 El backend sigue una arquitectura basada en Domain-Driven Design (DDD), estructurada en capas con Spring Boot como motor principal. Las capas están organizadas de la siguiente manera:
-- **Capa de Aplicación:** Contiene los casos de uso y los servicios RESTful expuestos a los clientes.
+- **Capa de Aplicación:** Contiene los casos de uso y los puertos necesarios para ejecutarlos. Los servicios REST se ubican en el adaptador HTTP (`apps/backend`).
 - **Capa de Dominio:** Define las entidades del negocio, los agregados, y los servicios del dominio, siguiendo principios de diseño orientado al dominio.
 - **Capa de Infraestructura:** Integra la persistencia de datos, servicios externos, y configuraciones de seguridad.
 El diseño sigue principios de separación de responsabilidades y extensibilidad para facilitar futuras integraciones. Se emplea un sistema de base de datos relacional (SQL), utilizando PostgreSQL como base de datos principal y Hibernate como framework ORM para gestionar la persistencia. Para pruebas, se incluye H2 como base de datos embebida.
+
+### Módulo de usuarios como referencia
+
+El módulo `user` separa el agregado y sus reglas (`domain`) de los casos de uso y los puertos de hash y emisión
+de tokens (`application`). Las implementaciones JPA, BCrypt y JWT pertenecen a `infrastructure`; el controlador
+depende de `TokenIssuer` y recibe el valor y la duración de la cookie sin conocer JWT.
+Los contratos JSON pertenecen a `apps/backend/dto`.
+El registro asigna únicamente el rol `USER`. Las cuentas `ADMIN` se aprovisionan fuera del registro público.
+
+Para ejecutar las pruebas con Java 25 no se requieren variables de entorno: `./gradlew test` usa H2 y una clave de prueba local.
+La aplicación en ejecución sí requiere las variables declaradas en `src/main/resources/application.yml`.
+`CORS_ALLOWED_ORIGINS` acepta orígenes exactos separados por comas, por ejemplo
+`http://localhost:5173,http://127.0.0.1:5173`. Usa la misma dirección de host
+en frontend y API para que las cookies `SameSite=Lax` acompañen las solicitudes.
+
+La API entrega el JWT en una cookie `HttpOnly` durante el inicio de sesión. Antes de una petición que cambie datos,
+el cliente debe obtener el token CSRF mediante `GET /api/users/csrf` y enviarlo en la cabecera `X-XSRF-TOKEN`;
+la cookie `XSRF-TOKEN` también debe acompañar la petición. Los navegadores deben incluir las credenciales en
+las solicitudes entre orígenes. La cookie de autenticación usa `Secure` cuando la petición llega por HTTPS;
+el servidor interpreta las cabeceras de proxy configuradas mediante `forward-headers-strategy`.
+El registro y el inicio de sesión devuelven un usuario sin contraseña, en lugar de un mensaje de texto.
+
+### Módulo de becas
+
+`scholarship/domain` contiene el agregado inmutable `Scholarship`, sus reglas de creación y actualización,
+y el value object `Requirement` sin dependencias de JPA. `scholarship/infrastructure` transforma ambos
+en `ScholarshipEntity` y `RequirementEmbeddable`, conservando la tabla `scholarship_requirements`.
+Los casos de uso dependen del puerto `ScholarshipRepository`; el adaptador HTTP transforma solicitudes y
+respuestas en `apps/backend/dto`.
+
+La creación asigna el identificador y la fecha en el servidor. En `POST /api/scholarships/update/{id}`,
+un campo `null` conserva el valor anterior y `requirements: []` elimina todos los requisitos; los textos
+vacíos se rechazan. La creación devuelve el recurso JSON con estado 201, la actualización devuelve el recurso
+JSON con estado 200 y la eliminación devuelve 204. Un identificador inexistente devuelve 404; los datos
+inválidos devuelven 400. Las escrituras requieren rol `ADMIN`, cookie JWT y token CSRF.
+
 
 ![](img/hexagonalArch.jpg)
 
@@ -44,7 +80,14 @@ main.java.com.mistysoft.proceedhub
 ├───apps
 │   └───backend
 │           ScholarshipController.java
+│           ScholarshipErrorHandler.java
 │           UserController.java
+│           UserErrorHandler.java
+│           dto/{RegisterUserRequest,LoginUserRequest,UserResponse}.java
+│           dto/{ScholarshipRequest,ScholarshipResponse}.java
+│           config/ClockConfig.java
+│           config/SecurityConfig.java
+│           config/WebConfig.java
 │
 └───modules
     ├───scholarship
@@ -53,50 +96,43 @@ main.java.com.mistysoft.proceedhub
     │   │   │   DeleteScholarship.java
     │   │   │   GetAllScholarships.java
     │   │   │   SearchScholarship.java
+    │   │   │   ScholarshipNotFoundException.java
     │   │   │   UpdateScholarship.java
-    │   │   │
-    │   │   └───dto
-    │   │           ScholarshipDTO.java
     │   │
     │   ├───domain
-    │   │       IScholarshipRepository.java
+    │   │       ScholarshipRepository.java
     │   │       Requirement.java
     │   │       Scholarship.java
+    │   │       ScholarshipChanges.java
     │   │
     │   └───infrastructure
     │           ISpringDataScholarshipRepository.java
     │           JpaScholarshipRepository.java
+    │           RequirementEmbeddable.java
     │           ScholarshipEntity.java
     │           ScholarshipMapper.java
-    │
-    ├───shared
-    │   ├───config
-    │   │       SecurityConfig.java
-    │   │       WebConfig.java
-    │   │
-    │   └───security
-    │           JwtUtil.java
     │
     └───user
         ├───application
         │   │   LoginUser.java
+        │   │   PasswordHasher.java
         │   │   RegisterUser.java
         │   │   SearchUser.java
-        │   │
-        │   └───dto
-        │           UserDTO.java
+        │   │   TokenIssuer.java
         │
         ├───domain
-        │       IUserRepository.java
+        │       UserRepository.java
         │       Role.java
         │       User.java
         │       UserId.java
         │
         └───infrastructure
+                BCryptPasswordHasher.java
                 ISpringDataUserRepository.java
                 JpaUserRepository.java
                 UserEntity.java
                 UserMapper.java
+                security/{JwtAuthenticationFilter,JwtUtil}.java
 ```
 ### Funcionalidades principales
 
@@ -481,5 +517,3 @@ public void deleteById(String id) {
 }
 
 ```
-
-
