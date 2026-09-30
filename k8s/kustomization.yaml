@@ -6,6 +6,7 @@ resources:
   - postgres.yaml
   - backend.yaml
   - frontend.yaml
+  - hpa.yaml
 configMapGenerator:
   - name: proceedhub-config
     literals:
