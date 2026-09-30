@@ -45,6 +45,9 @@ El registro asigna únicamente el rol `USER`. Las cuentas `ADMIN` se aprovisiona
 
 Para ejecutar las pruebas con Java 25 no se requieren variables de entorno: `./gradlew test` usa H2 y una clave de prueba local.
 La aplicación en ejecución sí requiere las variables declaradas en `src/main/resources/application.yml`.
+`CORS_ALLOWED_ORIGINS` acepta orígenes exactos separados por comas, por ejemplo
+`http://localhost:5173,http://127.0.0.1:5173`. Usa la misma dirección de host
+en frontend y API para que las cookies `SameSite=Lax` acompañen las solicitudes.
 
 La API entrega el JWT en una cookie `HttpOnly` durante el inicio de sesión. Antes de una petición que cambie datos,
 el cliente debe obtener el token CSRF mediante `GET /api/users/csrf` y enviarlo en la cabecera `X-XSRF-TOKEN`;
